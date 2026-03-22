@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log Analyzer - Upload Logs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; }
+        .navbar {
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h1 { color: #e94560; font-size: 22px; }
+        .nav-links a {
+            color: #aaa; text-decoration: none;
+            margin-left: 25px; font-size: 14px;
+        }
+        .nav-links a:hover, .nav-links a.active { color: #e94560; }
+        .logout-btn {
+            background: rgba(233,69,96,0.2);
+            border: 1px solid #e94560;
+            color: #e94560;
+            padding: 7px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 20px;
+        }
+        .container { padding: 30px; max-width: 1000px; margin: 0 auto; }
+        .upload-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: border-color 0.3s;
+        }
+        .upload-card:hover { border-color: #e94560; }
+        .upload-icon { font-size: 60px; margin-bottom: 15px; }
+        .upload-card h3 { color: #ccc; margin-bottom: 10px; }
+        .upload-card p { color: #888; font-size: 14px; margin-bottom: 20px; }
+        .file-input { display: none; }
+        .btn {
+            padding: 12px 25px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: linear-gradient(135deg, #e94560, #c62a47); color: white; }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            margin-left: 10px;
+        }
+        .selected-file {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 12px 20px;
+            margin: 15px 0;
+            color: #ccc;
+            font-size: 14px;
+            display: none;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 8px;
+            margin: 15px 0;
+            display: none;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: linear-gradient(135deg, #e94560, #c62a47);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+        .result-card {
+            background: rgba(46,204,113,0.1);
+            border: 1px solid #2ecc71;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .result-card h3 { color: #2ecc71; margin-bottom: 15px; }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .result-item { text-align: center; }
+        .result-item .num { font-size: 28px; font-weight: 700; }
+        .result-item .lbl { color: #aaa; font-size: 12px; }
+        .section-title {
+            font-size: 18px; color: #ccc;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: rgba(255,255,255,0.07);
+            padding: 12px 15px;
+            text-align: left;
+            color: #aaa;
+            font-size: 13px;
+        }
+        td {
+            padding: 12px 15px;
+            color: #ddd;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .badge-ERROR { background: rgba(233,69,96,0.2); color: #e94560; }
+        .badge-WARN { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .badge-FATAL { background: rgba(155,89,182,0.2); color: #9b59b6; }
+        .analyze-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <h1>🔍 Log Analyzer</h1>
+    <div class="nav-links">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="logs.html" class="active">Upload Logs</a>
+        <a href="patterns.html">Patterns</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+    <!-- UPLOAD AREA -->
+    <div class="upload-card" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📂</div>
+        <h3>Click to Upload Log File</h3>
+        <p>Supports .log, .txt files up to 50MB</p>
+        <input type="file" id="fileInput" class="file-input"
+               accept=".log,.txt" onchange="fileSelected(this)"/>
+    </div>
+
+    <div class="selected-file" id="selectedFile">📄 No file selected</div>
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div style="text-align:center; margin-bottom: 30px;">
+        <button class="btn btn-primary" onclick="uploadFile()">⬆️ Upload & Parse</button>
+        <button class="btn btn-secondary" onclick="loadAllLogs()">🔄 Refresh List</button>
+    </div>
+
+    <!-- UPLOAD RESULT -->
+    <div class="result-card" id="resultCard">
+        <h3>✅ File Parsed Successfully!</h3>
+        <div class="result-grid">
+            <div class="result-item">
+                <div class="num" id="resLines" style="color:#3498db">-</div>
+                <div class="lbl">Total Lines</div>
+            </div>
+            <div class="result-item">
+                <div class="num" id="resErrors" style="color:#e94560">-</div>
+                <div class="lbl">Errors</div>
+            </div>
+            <div class="result-item">
+                <div class="num" id="resWarns" style="color:#f39c12">-</div>
+                <div class="lbl">Warnings</div>
+            </div>
+            <div class="result-item">
+                <div class="num" id="resFatals" style="color:#9b59b6">-</div>
+                <div class="lbl">Fatals</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANALYZE BUTTON -->
+    <button class="analyze-btn" id="analyzeBtn" onclick="analyzePatterns()">
+        🧠 Run Pattern Analysis
+    </button>
+
+    <!-- ALL LOGS TABLE -->
+    <div class="section-title">📋 All Uploaded Log Files</div>
+    <table>
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Lines</th>
+                <th>Errors</th>
+                <th>Warnings</th>
+                <th>Fatals</th>
+                <th>Uploaded At</th>
+            </tr>
+        </thead>
+        <tbody id="logsTable">
+            <tr><td colspan="6" style="text-align:center;color:#aaa">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const API = 'http://localhost:8080';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+    function fileSelected(input) {
+        const file = input.files[0];
+        if (file) {
+            const el = document.getElementById('selectedFile');
+            el.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+            el.style.display = 'block';
+        }
+    }
+
+    async function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files[0]) {
+            alert('Please select a file first!');
+            return;
+        }
+
+        // Show progress
+        document.getElementById('progressBar').style.display = 'block';
+        document.getElementById('progressFill').style.width = '60%';
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const res = await fetch(`${API}/api/logs/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            document.getElementById('progressFill').style.width = '100%';
+
+            if (res.ok) {
+                const data = await res.json();
+                // Show result
+                document.getElementById('resLines').textContent = data.totalLines;
+                document.getElementById('resErrors').textContent = data.errorCount;
+                document.getElementById('resWarns').textContent = data.warnCount;
+                document.getElementById('resFatals').textContent = data.fatalCount;
+                document.getElementById('resultCard').style.display = 'block';
+                document.getElementById('analyzeBtn').style.display = 'inline-block';
+                loadAllLogs();
+            } else {
+                alert('Upload failed! Make sure you are logged in.');
+            }
+        } catch (err) {
+            alert('Error connecting to server!');
+        }
+
+        setTimeout(() => {
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+        }, 1000);
+    }
+
+    async function analyzePatterns() {
+        try {
+            await fetch(`${API}/api/patterns/analyze`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            alert('✅ Pattern analysis complete! Check the Patterns page.');
+        } catch (err) {
+            alert('Analysis failed!');
+        }
+    }
+
+    async function loadAllLogs() {
+        try {
+            const res = await fetch(`${API}/api/logs`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const logs = await res.json();
+            const tbody = document.getElementById('logsTable');
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa">No logs uploaded yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = logs.map(f => `
+                <tr>
+                    <td>📄 ${f.fileName}</td>
+                    <td>${f.totalLines}</td>
+                    <td><span class="badge badge-ERROR">${f.errorCount}</span></td>
+                    <td><span class="badge badge-WARN">${f.warnCount}</span></td>
+                    <td><span class="badge badge-FATAL">${f.fatalCount}</span></td>
+                    <td>${new Date(f.uploadedAt).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    loadAllLogs();
+</script>
+</body>
+</html>

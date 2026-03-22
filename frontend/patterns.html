@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log Analyzer - Patterns</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; }
+        .navbar {
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h1 { color: #e94560; font-size: 22px; }
+        .nav-links a { color: #aaa; text-decoration: none; margin-left: 25px; font-size: 14px; }
+        .nav-links a:hover, .nav-links a.active { color: #e94560; }
+        .logout-btn {
+            background: rgba(233,69,96,0.2);
+            border: 1px solid #e94560;
+            color: #e94560;
+            padding: 7px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 20px;
+        }
+        .container { padding: 30px; max-width: 1000px; margin: 0 auto; }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .page-header h2 { font-size: 22px; }
+        .btn-analyze {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .pattern-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .pattern-card:hover { transform: translateX(5px); border-color: rgba(255,255,255,0.2); }
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .pattern-level { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .level-ERROR { background: rgba(233,69,96,0.2); color: #e94560; }
+        .level-FATAL { background: rgba(155,89,182,0.2); color: #9b59b6; }
+        .level-WARN { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .pattern-message {
+            color: #ddd;
+            font-size: 14px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        .pattern-footer {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #888;
+        }
+        .pattern-footer span { display: flex; align-items: center; gap: 5px; }
+        .severity-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .severity-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #e94560, #9b59b6);
+        }
+        .empty { text-align: center; color: #555; padding: 60px; font-size: 16px; }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <h1>🔍 Log Analyzer</h1>
+    <div class="nav-links">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="logs.html">Upload Logs</a>
+        <a href="patterns.html" class="active">Patterns</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h2>🧠 Detected Failure Patterns</h2>
+        <button class="btn-analyze" onclick="runAnalysis()">
+            🔄 Re-run Analysis
+        </button>
+    </div>
+    <div id="patternsList">
+        <div class="empty">Loading patterns...</div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+    async function loadPatterns() {
+        try {
+            const res = await fetch(`${API}/api/patterns`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const patterns = await res.json();
+            const container = document.getElementById('patternsList');
+
+            if (patterns.length === 0) {
+                container.innerHTML = '<div class="empty">No patterns detected yet.<br>Upload a log file and run analysis!</div>';
+                return;
+            }
+
+            const maxSeverity = Math.max(...patterns.map(p => p.severityScore));
+
+            container.innerHTML = patterns.map(p => `
+                <div class="pattern-card">
+                    <div class="pattern-header">
+                        <span class="pattern-level level-${p.level}">${p.level}</span>
+                        <span style="color:#aaa; font-size:13px">
+                            🔁 ${p.occurrenceCount} occurrences &nbsp;|&nbsp;
+                            ⚡ Severity: ${p.severityScore.toFixed(1)}
+                        </span>
+                    </div>
+                    <div class="pattern-message">${p.patternMessage}</div>
+                    <div class="severity-bar">
+                        <div class="severity-fill"
+                             style="width:${(p.severityScore/maxSeverity*100).toFixed(0)}%">
+                        </div>
+                    </div>
+                    <div class="pattern-footer">
+                        <span>🕐 First seen: ${new Date(p.firstSeen).toLocaleString()}</span>
+                        <span>🕐 Last seen: ${new Date(p.lastSeen).toLocaleString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function runAnalysis() {
+        try {
+            await fetch(`${API}/api/patterns/analyze`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            loadPatterns();
+        } catch (err) {
+            alert('Analysis failed!');
+        }
+    }
+
+    loadPatterns();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+2024-01-15 10:00:01 INFO Application started
+2024-01-15 10:01:00 ERROR Database connection failed
+2024-01-15 10:01:05 WARN Retrying connection...
+2024-01-15 10:02:00 ERROR Null pointer exception in UserService
+2024-01-15 10:03:00 FATAL System out of memory
+2024-01-15 10:04:00 ERROR Timeout connecting to server
